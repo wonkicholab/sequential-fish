@@ -1,4 +1,4 @@
-directory for codebooks of the devices we used in the project.
+This is a directory for codebooks of the devices we used in the project.
 
  1. MVP
   - (detailed explanation)
