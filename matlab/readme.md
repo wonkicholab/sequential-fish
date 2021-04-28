@@ -9,3 +9,4 @@ Just like .m file, you can just run the file by type 'SFISH_tablet' on the termi
 
 For modification, you should use 'appdesigner' application of MATLAB.
 
+For ease of the users, there is a .m file of SFISH_tablet.
