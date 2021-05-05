@@ -2,9 +2,7 @@
 m = modbus('serialrtu','COM7','Parity','even');
 
 %%
-% 1 register는 2byte의 data를 holding중이라 생각하면 됨
-% data 형식이 2 bytes보다 큰 경우 다음 register number가 
-% data를 나눠 saving 하는 형식
+% 1 register holds 2 bytes data each.
 
 % unsigned short int (2bytes) == uint16
 % unsigned long int (4bytes) == uint32
