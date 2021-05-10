@@ -7,7 +7,9 @@ Site for wonkicholab:
 https://www.wonkicholab.com/
 
 
-*SFISH_tablet.mlapp*
+
+
+**SFISH_tablet.mlapp**
 
 This is the file for running SFISH with controlling devices on the computer.
 
