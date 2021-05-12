@@ -17,4 +17,4 @@ For modification, you should use 'appdesigner' application of MATLAB.
 For ease of the users, there is a .m file of SFISH_tablet.
 
 
-( Latest version: SFISH_tablet_ver_210512 )
+( Latest update: 21. 05. 12 )
