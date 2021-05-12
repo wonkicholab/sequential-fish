@@ -15,3 +15,6 @@ The file is run on the MATLAB.
 Just like .m file, you can just run the file by type 'SFISH_tablet' on the terminal of matlab.
 For modification, you should use 'appdesigner' application of MATLAB.
 For ease of the users, there is a .m file of SFISH_tablet.
+
+
+--Latest version: SFISH_tablet_ver_210512--
