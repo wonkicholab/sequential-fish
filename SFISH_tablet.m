@@ -5,7 +5,6 @@ classdef SFISH_tablet < matlab.apps.AppBase
         figure                   matlab.ui.Figure
         title                    matlab.ui.control.Label
         Portbox                  matlab.ui.container.Panel
-        text26                   matlab.ui.control.Label
         text2                    matlab.ui.control.Label
         text17                   matlab.ui.control.Label
         text5                    matlab.ui.control.Label
@@ -14,7 +13,6 @@ classdef SFISH_tablet < matlab.apps.AppBase
         portpump                 matlab.ui.control.EditField
         portlaser_1              matlab.ui.control.EditField
         portlaser_2              matlab.ui.control.EditField
-        portshutter              matlab.ui.control.EditField
         initialize               matlab.ui.control.Button
         Autoparameterbox         matlab.ui.container.ButtonGroup
         ofbuffersEditFieldLabel  matlab.ui.control.Label
@@ -27,6 +25,10 @@ classdef SFISH_tablet < matlab.apps.AppBase
         EditField3               matlab.ui.control.EditField
         EditField4Label          matlab.ui.control.Label
         EditField4               matlab.ui.control.EditField
+        UseLaser2SwitchLabel     matlab.ui.control.Label
+        UseLaser2Switch          matlab.ui.control.Switch
+        UseShutterSwitchLabel    matlab.ui.control.Label
+        UseShutterSwitch         matlab.ui.control.Switch
         Runauto                  matlab.ui.control.Button
         MVP1box                  matlab.ui.container.ButtonGroup
         mvp1pos                  matlab.ui.control.EditField
@@ -59,8 +61,11 @@ classdef SFISH_tablet < matlab.apps.AppBase
         laserpower               matlab.ui.control.EditField
         lasermove                matlab.ui.control.Button
         Label                    matlab.ui.control.Label
-        Shutterbox               matlab.ui.container.ButtonGroup
-        Switch                   matlab.ui.control.Switch
+        laserOnoff               matlab.ui.control.RockerSwitch
+        Shutterbox               matlab.ui.container.Panel
+        shutterswitch            matlab.ui.control.Switch
+        text17_3                 matlab.ui.control.Label
+        portshutter              matlab.ui.control.EditField
     end
 
     % Callbacks that handle component events
@@ -86,6 +91,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             handles.output = hObject;
             movegui(hObject,"center");
             
+            % Assign spaces for the communication port objects of devices
             handles.MVPport = '-';
             handles.Pumpport = '-';
             handles.Laserport_1 = '-';
@@ -193,21 +199,10 @@ classdef SFISH_tablet < matlab.apps.AppBase
                     handles.Laserport_2 = '-';
                 end
             end
-            % % init shutter
-            if handles.Shutterport ~= '-'
-                try
-                    s5 = serialport(['COM' handles.Shutterport],9600);
-            
-                    handles.Shutterport = s5;
-                catch
-                    msgbox('Shutter port number is not correct!');
-                    app.portshutter.Value = '-';
-                    handles.Shutterport = '-';
-                end
-            end
             
             if (handles.MVPport == '-' || handles.Pumpport == '-' || handles.Laserport_1 == '-')
-                msgbox(["For sequencial FISH, we need all three devices ( MVP, Pump, and Laser ) !"; ...
+                msgbox(["For sequencial FISH, we need at least three devices!"; ...
+                    "        ( MVP, Pump, and Laser )"; ...
                     "Please check the connected ports of them!"]);
             end
             
@@ -216,13 +211,38 @@ classdef SFISH_tablet < matlab.apps.AppBase
 
         % Button pushed function: Runauto
         function RunautoButtonPushed(app, event)
+% % Examples how to make the devices
+% % moving mvp part
+% app.mvp1pos.Value = '7';
+% mvp1move_Callback(app,event);
+%  
+% % moving pump part
+% app.pumptime.Value = '4';
+% app.pumpflow.Value = '500';
+% pumpmoveButtonPushed(app,event);
+%            
+% % moving laser part
+% app.laserDropDown.Value = '1';
+% app.laserpower.Value = '66';
+% lasermove_Callback(app,event);
+            
+            % auto parameters control
+            % Where we have to actually implement
+            % -- not complete implementation -- 
+            
+            % Parameters parsing
+            N_of_buf = str2double(app.autonumbuf.Value);
+            
+            if app.UseLaser2Switch.Value == "Off"
+                % Use only laser #1
+            else
+                % Use both laser #1 and laser #2
+            end
+            
+            
             msgbox(["Not implemented / Should be implemented"; ...
-                "For run automatically, you should implement this part";"       and auto parameter box"]);
-        end
-
-        % Value changed function: Switch
-        function SwitchValueChanged(app, event)
-            msgbox('Not implemented / Should be implemented');
+                "For run automatically, you should implement this part"; ...
+                "       and auto parameter box"]);
         end
 
         % Value changed function: autonumbuf
@@ -432,13 +452,6 @@ classdef SFISH_tablet < matlab.apps.AppBase
             guidata(hObject, handles);
         end
 
-        % Value changed function: portshutter
-        function portshutter_Callback(app, event)
-            [hObject, eventdata, handles] = convertToGUIDECallbackArguments(app, event); %#ok<ASGLU>
-            handles.Shutterport = get(hObject, 'String');
-            guidata(hObject, handles);
-        end
-
         % Value changed function: pumpflow
         function pumpflow_Callback(app, event)
             [hObject, eventdata, handles] = convertToGUIDECallbackArguments(app, event); %#ok<ASGLU>
@@ -463,6 +476,64 @@ classdef SFISH_tablet < matlab.apps.AppBase
             handles.PumpTime = get(hObject, 'String');
             guidata(hObject, handles);
         end
+
+        % Value changed function: laserOnoff
+        function laserOnoffValueChanged(app, event)
+            [hObject, eventdata, handles] = convertToGUIDECallbackArguments(app, event); %#ok<ASGLU>
+            if app.laserOnoff.Value == "On"
+                if app.laserDropDown.Value == '1'
+                    if handles.Laserport_1 ~= '-'
+                    writeline(handles.Laserport_1,'SOURce:AM:STATe ON');
+                    pause(1);
+                    else
+                        msgbox('Please run the program after "Initialize"!');
+                    end
+                else
+                    if handles.Laserport_2 ~= '-'
+                        writeline(handles.Laserport_2,'SOURce:AM:STATe ON');
+                        pause(1);
+                    else
+                        msgbox('Please run the program after "Initialize"!!');
+                    end
+                end
+            else
+                if app.laserDropDown.Value == '1'
+                    if handles.Laserport_1 ~= '-'
+                    writeline(handles.Laserport_1,'SOURce:AM:STATe OFF');
+                    pause(1);
+                    else
+                        msgbox('Please run the program after "Initialize"!');
+                    end
+                else
+                    if handles.Laserport_2 ~= '-'
+                        writeline(handles.Laserport_2,'SOURce:AM:STATe OFF');
+                        pause(1);
+                    else
+                        msgbox('Please run the program after "Initialize"!!');
+                    end
+                end
+            end
+            
+        end
+
+        % Value changed function: portshutter
+        function portshutterValueChanged(app, event)
+            [hObject, eventdata, handles] = convertToGUIDECallbackArguments(app, event); %#ok<ASGLU>
+            try
+                s5 = serialport(['COM' app.portshutter.Value],9600);
+                s5.DataBits = 8;
+                s5.StopBits = 1;
+                s5.Parity = 'none';
+                configureTerminator(s5, "CR");
+
+                handles.Shutterport = s5;
+            catch
+                msgbox('Shutter port number is not correct!');
+                app.portshutter.Value = '-';
+                handles.Shutterport = '-';
+            end
+            guidata(hObject, handles);
+        end
     end
 
     % Component initialization
@@ -474,7 +545,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             % Create figure and hide until all components are created
             app.figure = uifigure('Visible', 'off');
             app.figure.Position = [680 635 498 614];
-            app.figure.Name = 'Main';
+            app.figure.Name = 'FISH tablet';
             app.figure.Resize = 'off';
             app.figure.HandleVisibility = 'callback';
             app.figure.Tag = 'figure';
@@ -494,46 +565,38 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.Portbox.Title = 'Connected ports';
             app.Portbox.Tag = 'uipanel1';
             app.Portbox.FontSize = 11;
-            app.Portbox.Position = [18 513 462 51];
-
-            % Create text26
-            app.text26 = uilabel(app.Portbox);
-            app.text26.Tag = 'text26';
-            app.text26.HorizontalAlignment = 'center';
-            app.text26.FontSize = 11;
-            app.text26.Position = [369 9 54 21];
-            app.text26.Text = 'Shutter';
+            app.Portbox.Position = [18 513 368 51];
 
             % Create text2
             app.text2 = uilabel(app.Portbox);
             app.text2.Tag = 'text2';
-            app.text2.HorizontalAlignment = 'center';
+            app.text2.HorizontalAlignment = 'right';
             app.text2.FontSize = 11;
-            app.text2.Position = [2 9 54 21];
+            app.text2.Position = [-15 6 54 22];
             app.text2.Text = 'MVP';
 
             % Create text17
             app.text17 = uilabel(app.Portbox);
             app.text17.Tag = 'text17';
-            app.text17.HorizontalAlignment = 'center';
+            app.text17.HorizontalAlignment = 'right';
             app.text17.FontSize = 11;
-            app.text17.Position = [181 8 54 22];
+            app.text17.Position = [175 6 54 22];
             app.text17.Text = 'Laser #1';
 
             % Create text5
             app.text5 = uilabel(app.Portbox);
             app.text5.Tag = 'text5';
-            app.text5.HorizontalAlignment = 'center';
+            app.text5.HorizontalAlignment = 'right';
             app.text5.FontSize = 11;
-            app.text5.Position = [94 9 54 21];
+            app.text5.Position = [80 6 54 22];
             app.text5.Text = 'Pump';
 
             % Create text17_2
             app.text17_2 = uilabel(app.Portbox);
             app.text17_2.Tag = 'text17';
-            app.text17_2.HorizontalAlignment = 'center';
+            app.text17_2.HorizontalAlignment = 'right';
             app.text17_2.FontSize = 11;
-            app.text17_2.Position = [273 8 54 22];
+            app.text17_2.Position = [269 6 54 22];
             app.text17_2.Text = 'Laser #2';
 
             % Create portmvp
@@ -542,7 +605,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.portmvp.Tag = 'portmvp';
             app.portmvp.HorizontalAlignment = 'center';
             app.portmvp.FontSize = 11;
-            app.portmvp.Position = [43 6 38 23];
+            app.portmvp.Position = [42 6 38 23];
             app.portmvp.Value = '-';
 
             % Create portpump
@@ -560,7 +623,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.portlaser_1.Tag = 'portlaser';
             app.portlaser_1.HorizontalAlignment = 'center';
             app.portlaser_1.FontSize = 11;
-            app.portlaser_1.Position = [231 6 38 23];
+            app.portlaser_1.Position = [232 6 38 23];
             app.portlaser_1.Value = '-';
 
             % Create portlaser_2
@@ -569,24 +632,15 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.portlaser_2.Tag = 'portlaser';
             app.portlaser_2.HorizontalAlignment = 'center';
             app.portlaser_2.FontSize = 11;
-            app.portlaser_2.Position = [324 6 38 23];
+            app.portlaser_2.Position = [326 6 38 23];
             app.portlaser_2.Value = '-';
-
-            % Create portshutter
-            app.portshutter = uieditfield(app.Portbox, 'text');
-            app.portshutter.ValueChangedFcn = createCallbackFcn(app, @portshutter_Callback, true);
-            app.portshutter.Tag = 'portshutter';
-            app.portshutter.HorizontalAlignment = 'center';
-            app.portshutter.FontSize = 11;
-            app.portshutter.Position = [417 6 38 23];
-            app.portshutter.Value = '-';
 
             % Create initialize
             app.initialize = uibutton(app.figure, 'push');
             app.initialize.ButtonPushedFcn = createCallbackFcn(app, @initialize_Callback, true);
             app.initialize.Tag = 'initialize';
             app.initialize.FontSize = 11;
-            app.initialize.Position = [83 472 102 35];
+            app.initialize.Position = [396 521 75 35];
             app.initialize.Text = 'Initialize';
 
             % Create Autoparameterbox
@@ -594,67 +648,87 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.Autoparameterbox.Title = 'Auto parameters';
             app.Autoparameterbox.Tag = 'uibuttongroup8';
             app.Autoparameterbox.FontSize = 11;
-            app.Autoparameterbox.Position = [264 175 216 288];
+            app.Autoparameterbox.Position = [264 61 216 370];
 
             % Create ofbuffersEditFieldLabel
             app.ofbuffersEditFieldLabel = uilabel(app.Autoparameterbox);
             app.ofbuffersEditFieldLabel.HorizontalAlignment = 'right';
-            app.ofbuffersEditFieldLabel.Position = [16 230 65 22];
+            app.ofbuffersEditFieldLabel.Position = [18 314 65 22];
             app.ofbuffersEditFieldLabel.Text = '# of buffers';
 
             % Create autonumbuf
             app.autonumbuf = uieditfield(app.Autoparameterbox, 'text');
             app.autonumbuf.ValueChangedFcn = createCallbackFcn(app, @autonumbufValueChanged, true);
             app.autonumbuf.HorizontalAlignment = 'center';
-            app.autonumbuf.Position = [96 230 100 22];
+            app.autonumbuf.Position = [98 314 100 22];
             app.autonumbuf.Value = '16';
 
             % Create EditField1Label
             app.EditField1Label = uilabel(app.Autoparameterbox);
             app.EditField1Label.HorizontalAlignment = 'right';
-            app.EditField1Label.Position = [19 177 62 22];
+            app.EditField1Label.Position = [21 253 62 22];
             app.EditField1Label.Text = 'Edit Field1';
 
             % Create EditField1
             app.EditField1 = uieditfield(app.Autoparameterbox, 'text');
-            app.EditField1.Position = [96 177 100 22];
+            app.EditField1.Position = [98 253 100 22];
 
             % Create EditField2Label
             app.EditField2Label = uilabel(app.Autoparameterbox);
             app.EditField2Label.HorizontalAlignment = 'right';
-            app.EditField2Label.Position = [19 124 62 22];
+            app.EditField2Label.Position = [21 192 62 22];
             app.EditField2Label.Text = 'Edit Field2';
 
             % Create EditField2
             app.EditField2 = uieditfield(app.Autoparameterbox, 'text');
-            app.EditField2.Position = [96 124 100 22];
+            app.EditField2.Position = [98 192 100 22];
 
             % Create EditField3Label
             app.EditField3Label = uilabel(app.Autoparameterbox);
             app.EditField3Label.HorizontalAlignment = 'right';
-            app.EditField3Label.Position = [19 71 62 22];
+            app.EditField3Label.Position = [21 131 62 22];
             app.EditField3Label.Text = 'Edit Field3';
 
             % Create EditField3
             app.EditField3 = uieditfield(app.Autoparameterbox, 'text');
-            app.EditField3.Position = [96 71 100 22];
+            app.EditField3.Position = [98 131 100 22];
 
             % Create EditField4Label
             app.EditField4Label = uilabel(app.Autoparameterbox);
             app.EditField4Label.HorizontalAlignment = 'right';
-            app.EditField4Label.Position = [19 18 62 22];
+            app.EditField4Label.Position = [21 70 62 22];
             app.EditField4Label.Text = 'Edit Field4';
 
             % Create EditField4
             app.EditField4 = uieditfield(app.Autoparameterbox, 'text');
-            app.EditField4.Position = [96 18 100 22];
+            app.EditField4.Position = [98 70 100 22];
+
+            % Create UseLaser2SwitchLabel
+            app.UseLaser2SwitchLabel = uilabel(app.Autoparameterbox);
+            app.UseLaser2SwitchLabel.HorizontalAlignment = 'center';
+            app.UseLaser2SwitchLabel.Position = [14 10 77 22];
+            app.UseLaser2SwitchLabel.Text = 'Use Laser #2';
+
+            % Create UseLaser2Switch
+            app.UseLaser2Switch = uiswitch(app.Autoparameterbox, 'slider');
+            app.UseLaser2Switch.Position = [132 11 47 21];
+
+            % Create UseShutterSwitchLabel
+            app.UseShutterSwitchLabel = uilabel(app.Autoparameterbox);
+            app.UseShutterSwitchLabel.HorizontalAlignment = 'center';
+            app.UseShutterSwitchLabel.Position = [18 38 69 22];
+            app.UseShutterSwitchLabel.Text = 'Use Shutter';
+
+            % Create UseShutterSwitch
+            app.UseShutterSwitch = uiswitch(app.Autoparameterbox, 'slider');
+            app.UseShutterSwitch.Position = [132 39 47 21];
 
             % Create Runauto
             app.Runauto = uibutton(app.figure, 'push');
             app.Runauto.ButtonPushedFcn = createCallbackFcn(app, @RunautoButtonPushed, true);
             app.Runauto.Tag = 'Runauto';
             app.Runauto.FontSize = 11;
-            app.Runauto.Position = [334 472 102 35];
+            app.Runauto.Position = [321 17 102 35];
             app.Runauto.Text = 'Run automatically';
 
             % Create MVP1box
@@ -662,7 +736,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.MVP1box.Title = 'MVP #1';
             app.MVP1box.Tag = 'uibuttongroup2';
             app.MVP1box.FontSize = 11;
-            app.MVP1box.Position = [21 405 232 58];
+            app.MVP1box.Position = [21 442 232 58];
 
             % Create mvp1pos
             app.mvp1pos = uieditfield(app.MVP1box, 'text');
@@ -695,7 +769,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.MVP2box.Title = 'MVP #2';
             app.MVP2box.Tag = 'uibuttongroup4';
             app.MVP2box.FontSize = 11;
-            app.MVP2box.Position = [21 328 232 58];
+            app.MVP2box.Position = [21 373 232 58];
 
             % Create text12
             app.text12 = uilabel(app.MVP2box);
@@ -728,7 +802,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.MVP3box.Title = 'MVP #3';
             app.MVP3box.Tag = 'uibuttongroup5';
             app.MVP3box.FontSize = 11;
-            app.MVP3box.Position = [21 251 232 58];
+            app.MVP3box.Position = [21 305 232 58];
 
             % Create mvp3pos
             app.mvp3pos = uieditfield(app.MVP3box, 'text');
@@ -761,14 +835,14 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.Pumpbox.Title = 'Pump';
             app.Pumpbox.Tag = 'uibuttongroup6';
             app.Pumpbox.FontSize = 11;
-            app.Pumpbox.Position = [21 16 232 150];
+            app.Pumpbox.Position = [21 187 232 104];
 
             % Create text14
             app.text14 = uilabel(app.Pumpbox);
             app.text14.Tag = 'text14';
             app.text14.HorizontalAlignment = 'center';
             app.text14.FontSize = 11;
-            app.text14.Position = [38 94 68 22];
+            app.text14.Position = [13 52 68 22];
             app.text14.Text = 'Time (min)';
 
             % Create text15
@@ -776,7 +850,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.text15.Tag = 'text15';
             app.text15.HorizontalAlignment = 'center';
             app.text15.FontSize = 11;
-            app.text15.Position = [38 54 68 22];
+            app.text15.Position = [13 14 68 22];
             app.text15.Text = 'Flow (ul/min)';
 
             % Create pumptime
@@ -785,8 +859,8 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.pumptime.Tag = 'pumptime1';
             app.pumptime.HorizontalAlignment = 'center';
             app.pumptime.FontSize = 11;
-            app.pumptime.Position = [124 94 62 22];
-            app.pumptime.Value = '6';
+            app.pumptime.Position = [99 52 62 22];
+            app.pumptime.Value = '4';
 
             % Create pumpflow
             app.pumpflow = uieditfield(app.Pumpbox, 'text');
@@ -794,7 +868,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.pumpflow.Tag = 'pumptime2';
             app.pumpflow.HorizontalAlignment = 'center';
             app.pumpflow.FontSize = 11;
-            app.pumpflow.Position = [124 54 62 22];
+            app.pumpflow.Position = [99 14 62 22];
             app.pumpflow.Value = '500';
 
             % Create pumpmove
@@ -802,7 +876,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.pumpmove.ButtonPushedFcn = createCallbackFcn(app, @pumpmoveButtonPushed, true);
             app.pumpmove.Tag = 'pumptime1move';
             app.pumpmove.FontSize = 11;
-            app.pumpmove.Position = [84 12 55 24];
+            app.pumpmove.Position = [168 33 55 24];
             app.pumpmove.Text = 'Move';
 
             % Create Laserbox
@@ -810,14 +884,14 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.Laserbox.Title = 'Laser';
             app.Laserbox.Tag = 'uibuttongroup7';
             app.Laserbox.FontSize = 11;
-            app.Laserbox.Position = [264 16 216 150];
+            app.Laserbox.Position = [20 16 233 158];
 
             % Create text18
             app.text18 = uilabel(app.Laserbox);
             app.text18.Tag = 'text18';
             app.text18.HorizontalAlignment = 'center';
             app.text18.FontSize = 11;
-            app.text18.Position = [34 29 64 15];
+            app.text18.Position = [22 27 64 15];
             app.text18.Text = 'Minimum: ';
 
             % Create text19
@@ -825,7 +899,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.text19.Tag = 'text19';
             app.text19.HorizontalAlignment = 'center';
             app.text19.FontSize = 11;
-            app.text19.Position = [34 7 64 15];
+            app.text19.Position = [22 4 64 15];
             app.text19.Text = 'Maximum: ';
 
             % Create text22
@@ -833,7 +907,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.text22.Tag = 'text22';
             app.text22.HorizontalAlignment = 'center';
             app.text22.FontSize = 11;
-            app.text22.Position = [145 29 35 15];
+            app.text22.Position = [162 27 35 15];
             app.text22.Text = 'mW';
 
             % Create text23
@@ -841,7 +915,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.text23.Tag = 'text23';
             app.text23.HorizontalAlignment = 'center';
             app.text23.FontSize = 11;
-            app.text23.Position = [145 7 35 15];
+            app.text23.Position = [162 4 35 15];
             app.text23.Text = 'mW';
 
             % Create minpower
@@ -849,7 +923,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.minpower.Tag = 'minpower';
             app.minpower.HorizontalAlignment = 'center';
             app.minpower.FontSize = 11;
-            app.minpower.Position = [95 29 53 15];
+            app.minpower.Position = [84 25 66 17];
             app.minpower.Text = '-';
 
             % Create maxpower
@@ -857,16 +931,15 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.maxpower.Tag = 'maxpower';
             app.maxpower.HorizontalAlignment = 'center';
             app.maxpower.FontSize = 11;
-            app.maxpower.Position = [95 8 53 15];
+            app.maxpower.Position = [84 3 66 17];
             app.maxpower.Text = '-';
 
             % Create text24
             app.text24 = uilabel(app.Laserbox);
             app.text24.Tag = 'text24';
             app.text24.HorizontalAlignment = 'center';
-            app.text24.VerticalAlignment = 'top';
             app.text24.FontSize = 11;
-            app.text24.Position = [27 81 53 15];
+            app.text24.Position = [29 80 42 15];
             app.text24.Text = 'Power';
 
             % Create text25
@@ -875,14 +948,14 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.text25.HorizontalAlignment = 'center';
             app.text25.VerticalAlignment = 'top';
             app.text25.FontSize = 11;
-            app.text25.Position = [145 81 35 15];
+            app.text25.Position = [156 80 35 15];
             app.text25.Text = 'mW';
 
             % Create laserDropDown
             app.laserDropDown = uidropdown(app.Laserbox);
             app.laserDropDown.Items = {'1', '2'};
             app.laserDropDown.ValueChangedFcn = createCallbackFcn(app, @laserDropDown_callback, true);
-            app.laserDropDown.Position = [78 104 100 22];
+            app.laserDropDown.Position = [41 107 60 22];
             app.laserDropDown.Value = '1';
 
             % Create laserpower
@@ -891,7 +964,7 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.laserpower.Tag = 'laserpower';
             app.laserpower.HorizontalAlignment = 'center';
             app.laserpower.FontSize = 11;
-            app.laserpower.Position = [82 80 66 17];
+            app.laserpower.Position = [78 79 66 17];
             app.laserpower.Value = '-';
 
             % Create lasermove
@@ -899,28 +972,48 @@ classdef SFISH_tablet < matlab.apps.AppBase
             app.lasermove.ButtonPushedFcn = createCallbackFcn(app, @lasermove_Callback, true);
             app.lasermove.Tag = 'lasermove';
             app.lasermove.FontSize = 11;
-            app.lasermove.Position = [64 50 79 23];
+            app.lasermove.Position = [70 48 79 23];
             app.lasermove.Text = 'Move';
 
             % Create Label
             app.Label = uilabel(app.Laserbox);
             app.Label.HorizontalAlignment = 'right';
-            app.Label.Position = [38 104 25 22];
+            app.Label.Position = [7 111 16 15];
             app.Label.Text = '#';
 
-            % Create Shutterbox
-            app.Shutterbox = uibuttongroup(app.figure);
-            app.Shutterbox.Title = 'Shutter';
-            app.Shutterbox.Tag = 'uibuttongroup9';
-            app.Shutterbox.FontSize = 11;
-            app.Shutterbox.Position = [21 175 232 58];
+            % Create laserOnoff
+            app.laserOnoff = uiswitch(app.Laserbox, 'rocker');
+            app.laserOnoff.Orientation = 'horizontal';
+            app.laserOnoff.ValueChangedFcn = createCallbackFcn(app, @laserOnoffValueChanged, true);
+            app.laserOnoff.Position = [157 108 45 20];
+            app.laserOnoff.Value = 'On';
 
-            % Create Switch
-            app.Switch = uiswitch(app.Shutterbox, 'slider');
-            app.Switch.Items = {'Close', 'Open'};
-            app.Switch.ValueChangedFcn = createCallbackFcn(app, @SwitchValueChanged, true);
-            app.Switch.Position = [94 10 45 20];
-            app.Switch.Value = 'Close';
+            % Create Shutterbox
+            app.Shutterbox = uipanel(app.figure);
+            app.Shutterbox.Title = 'Shutter';
+            app.Shutterbox.FontSize = 11;
+            app.Shutterbox.Position = [264 442 216 58];
+
+            % Create shutterswitch
+            app.shutterswitch = uiswitch(app.Shutterbox, 'slider');
+            app.shutterswitch.Position = [133 11 45 20];
+
+            % Create text17_3
+            app.text17_3 = uilabel(app.Shutterbox);
+            app.text17_3.Tag = 'text17';
+            app.text17_3.HorizontalAlignment = 'right';
+            app.text17_3.FontSize = 11;
+            app.text17_3.Position = [-1 8 63 22];
+            app.text17_3.Text = 'Shutter port';
+
+            % Create portshutter
+            app.portshutter = uieditfield(app.Shutterbox, 'text');
+            app.portshutter.ValueChangedFcn = createCallbackFcn(app, @portshutterValueChanged, true);
+            app.portshutter.Tag = 'portlaser';
+            app.portshutter.HorizontalAlignment = 'center';
+            app.portshutter.FontSize = 11;
+            app.portshutter.Position = [65 8 38 23];
+            app.portshutter.Value = '-';
 
             % Show the figure after all components are created
             app.figure.Visible = 'on';
